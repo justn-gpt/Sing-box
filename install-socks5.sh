@@ -61,7 +61,7 @@ EOF
 install_socks5(){
   socks5_config
   if [ ! -e "${FILE_PATH}/s5" ]; then
-    curl -L -sS -o "${FILE_PATH}/s5" "https://github.com/justn-gpt/Sing-box/web"
+    curl -L -sS -o "${FILE_PATH}/s5" "https://raw.githubusercontent.com/justn-gpt/Sing-box/main/web"
   fi
 
   if [ -e "${FILE_PATH}/s5" ]; then
