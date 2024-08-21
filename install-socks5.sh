@@ -2,10 +2,21 @@
 
 set -x  # 启用调试模式
 
-# 预定义变量
-SOCKS5_PORT=9939
-SOCKS5_USER="juju"
-SOCKS5_PASS="972633"  # 确保密码中不包含 @ 或 :
+# 检查是否提供了必要的环境变量或命令行参数
+if [ -z "$SOCKS5_PORT" ]; then
+  echo "请设置 SOCKS5_PORT 环境变量或通过命令行传递，例如：SOCKS5_PORT=1234"
+  exit 1
+fi
+
+if [ -z "$SOCKS5_USER" ]; then
+  echo "请设置 SOCKS5_USER 环境变量或通过命令行传递，例如：SOCKS5_USER=\"your_user\""
+  exit 1
+fi
+
+if [ -z "$SOCKS5_PASS" ]; then
+  echo "请设置 SOCKS5_PASS 环境变量或通过命令行传递，例如：SOCKS5_PASS=\"your_password\""
+  exit 1
+fi
 
 # 获取当前用户路径
 FILE_PATH="/home/$USER/.s5"
