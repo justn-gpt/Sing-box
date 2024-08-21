@@ -1,24 +1,21 @@
 #!/bin/bash
 
-set -x  # 启用调试模式，显示每一行命令的执行情况
+set -x  # 启用调试模式
 
 # 预定义变量
 SOCKS5_PORT=9939
 SOCKS5_USER="juju"
 SOCKS5_PASS="972633"  # 确保密码中不包含 @ 或 :
 
-# 获取当前用户
-USER=$(whoami)
-
-# 固定路径，不使用小写转换
-FILE_PATH="/home/$USER/.s5"
+# 硬编码路径，不使用变量
+FILE_PATH="/home/jus9b/.s5"  # 将 `your_username` 替换为实际用户名
 S5_EXECUTABLE="${FILE_PATH}/s5"
 
 # 打印路径信息用于调试
 echo "即将创建的目录: $FILE_PATH"
 
-# 创建必要的目录
-mkdir -p "$FILE_PATH"
+# 使用sudo创建必要的目录
+sudo mkdir -p "$FILE_PATH"
 if [ $? -ne 0 ]; then
     echo "目录创建失败: $FILE_PATH"
     exit 1
