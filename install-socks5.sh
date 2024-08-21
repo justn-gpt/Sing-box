@@ -2,8 +2,8 @@
 
 # 预定义变量
 SOCKS5_PORT=9939
-SOCKS5_USER="juju"
-SOCKS5_PASS="972633"  # 确保密码中不包含 @ 或 :
+SOCKS5_USER=juju
+SOCKS5_PASS=972633  # 确保密码中不包含 @ 或 :
 
 # 固定路径
 USER=$(whoami)
