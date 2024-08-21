@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -x  # 启用调试模式，显示每一行命令的执行情况
+
 # 预定义变量
 SOCKS5_PORT=9939
 SOCKS5_USER="juju"
@@ -8,14 +10,12 @@ SOCKS5_PASS="972633"  # 确保密码中不包含 @ 或 :
 # 获取当前用户
 USER=$(whoami)
 
-# 固定路径
-WORKDIR="/home/${USER}/.nezha-agent"
-FILE_PATH="/home/${USER}/.s5"
+# 固定路径，不使用小写转换
+FILE_PATH="/home/$USER/.s5"
 S5_EXECUTABLE="${FILE_PATH}/s5"
 
-# 检查路径输出
-echo "工作目录: $WORKDIR"
-echo "S5 目录: $FILE_PATH"
+# 打印路径信息用于调试
+echo "即将创建的目录: $FILE_PATH"
 
 # 创建必要的目录
 mkdir -p "$FILE_PATH"
@@ -94,6 +94,7 @@ install_socks5() {
     exit 1
   fi
 
+  # 验证代理是否成功
   CURL_OUTPUT=$(curl -s 4.ipw.cn --socks5 $SOCKS5_USER:$SOCKS5_PASS@localhost:$SOCKS5_PORT)
   if [[ $CURL_OUTPUT =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
     echo "代理创建成功，返回的IP是: $CURL_OUTPUT"
