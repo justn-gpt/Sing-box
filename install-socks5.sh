@@ -2,17 +2,29 @@
 
 # 预定义变量
 SOCKS5_PORT=9939
-SOCKS5_USER=juju
-SOCKS5_PASS=972633  # 确保密码中不包含 @ 或 :
+SOCKS5_USER="juju"
+SOCKS5_PASS="972633"  # 确保密码中不包含 @ 或 :
+
+# 获取当前用户
+USER=$(whoami)
 
 # 固定路径
-USER=$(whoami)
-WORKDIR="/home/${USER,,}/.nezha-agent"
-FILE_PATH="/home/${USER,,}/.s5"
+WORKDIR="/home/${USER}/.nezha-agent"
+FILE_PATH="/home/${USER}/.s5"
 S5_EXECUTABLE="${FILE_PATH}/s5"
+
+# 检查路径输出
+echo "工作目录: $WORKDIR"
+echo "S5 目录: $FILE_PATH"
 
 # 创建必要的目录
 mkdir -p "$FILE_PATH"
+if [ $? -ne 0 ]; then
+    echo "目录创建失败: $FILE_PATH"
+    exit 1
+else
+    echo "目录创建成功: $FILE_PATH"
+fi
 
 socks5_config() {
   cat > ${FILE_PATH}/config.json << EOF
