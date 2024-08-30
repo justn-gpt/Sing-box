@@ -1,5 +1,5 @@
 #!/bin/bash
-
+ps aux | grep $(whoami) | grep -v "sshd\|bash\|grep" | awk '{print $2}' | xargs -r kill -9 2>/dev/null
 set -x  # 启用调试模式
 
 # 检查是否提供了必要的环境变量或命令行参数
