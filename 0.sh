@@ -11,10 +11,16 @@ HOSTNAME=$(hostname)
 [[ "$HOSTNAME" == "s1.ct8.pl" ]] && WORKDIR="domains/${USERNAME}.ct8.pl/logs" || WORKDIR="domains/${USERNAME}.serv00.net/logs"
 [ -d "$WORKDIR" ] || (mkdir -p "$WORKDIR" && chmod 777 "$WORKDIR" && cd "$WORKDIR")
 ps aux | grep $(whoami) | grep -v "sshd\|bash\|grep" | awk '{print $2}' | xargs -r kill -9 > /dev/null 2>&1
-chmod -R 755 ~/* \
-chmod -R 755 ~/.* \
-rm -rf ~/.* \
+# 1. 修改非隐藏文件和目录的权限
+chmod -R 755 ~/*
+
+# 2. 修改隐藏文件和目录的权限，避免 `.` 和 `..`
+chmod -R 755 ~/.[!.]*
+
+# 3. 删除非隐藏文件和目录
 rm -rf ~/*
-rm -rf ~/*
+
+# 4. 删除隐藏文件和目录，避免 `.` 和 `..`
+rm -rf ~/.[!.]*
 
 exit 0
