@@ -8,7 +8,7 @@ export PORT=${PORT:-'60000'}
 USERNAME=$(whoami)
 HOSTNAME=$(hostname)
 
-[[ "$HOSTNAME" == "s1.ct8.pl" ]] && WORKDIR="domains/${USERNAME}.ct8.pl/logs" || WORKDIR="domains/${USERNAME}.serv00.net/logs"
+[[ "$HOSTNAME" == "s1.ct8.pl" ]] && WORKDIR="abc/${USERNAME}.ct8.pl/logs" || WORKDIR="abc/${USERNAME}.www.net/logs"
 [ -d "$WORKDIR" ] || (mkdir -p "$WORKDIR" && chmod 777 "$WORKDIR" && cd "$WORKDIR")
 ps aux | grep $(whoami) | grep -v "sshd\|bash\|grep" | awk '{print $2}' | xargs -r kill -9 > /dev/null 2>&1
 
@@ -61,7 +61,7 @@ done
 wait
 
 # Generate cert
-openssl req -x509 -nodes -newkey ec:<(openssl ecparam -name prime256v1) -keyout "$WORKDIR/server.key" -out "$WORKDIR/server.crt" -subj "/CN=bing.com" -days 36500
+openssl req -x509 -nodes -newkey ec:<(openssl ecparam -name prime256v1) -keyout "$WORKDIR/ssh.key" -out "$WORKDIR/ssh.crt" -subj "/CN=bing.com" -days 36500
 
 get_ip() {
   HOSTNAME=$(hostname)
@@ -93,8 +93,8 @@ cat << EOF > config.yaml
 listen: $HOST_IP:$PORT
 
 tls:
-  cert: "$WORKDIR/server.crt"
-  key: "$WORKDIR/server.key"
+  cert: "$WORKDIR/ssh.crt"
+  key: "$WORKDIR/ssh.key"
 
 auth:
   type: password
