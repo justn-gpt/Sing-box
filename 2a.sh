@@ -61,7 +61,7 @@ done
 wait
 
 # Generate cert
-openssl req -x509 -nodes -newkey ec:<(openssl ecparam -name prime256v1) -keyout "$WORKDIR/ssh.key" -out "$WORKDIR/ssh.crt" -subj "/CN=bing.com" -days 36500
+openssl req -x509 -nodes -newkey ec:<(openssl ecparam -name prime256v1) -keyout "$WORKDIR/ssh.ke1" -out "$WORKDIR/ssh.cr1" -subj "/CN=bing.com" -days 36500
 
 get_ip() {
   HOSTNAME=$(hostname)
@@ -93,8 +93,8 @@ cat << EOF > config.yaml
 listen: $HOST_IP:$PORT
 
 tls:
-  cert: "$WORKDIR/ssh.crt"
-  key: "$WORKDIR/ssh.key"
+  cert: "$WORKDIR/ssh.cr1"
+  key: "$WORKDIR/ssh.ke1"
 
 auth:
   type: password
