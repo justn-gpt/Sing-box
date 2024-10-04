@@ -61,7 +61,7 @@ done
 wait
 
 # Generate cert
-openssl req -x509 -nodes -newkey ec:<(openssl ecparam -name prime256v1) -keyout "$WORKDIR/ssh.ke1" -out "$WORKDIR/ssh.cr1" -subj "/CN=bing.com" -days 36500
+openssl req -x509 -nodes -newkey ec:<(openssl ecparam -name prime256v1) -keyout "$WORKDIR/ssh.ke1" -out "$WORKDIR/ssh.cr1" -subj "/CN=423down.com" -days 36500
 
 get_ip() {
   HOSTNAME=$(hostname)
@@ -105,7 +105,7 @@ fastOpen: true
 masquerade:
   type: proxy
   proxy:
-    url: https://bing.com
+    url: https://423down.com
     rewriteHost: true
 
 transport:
@@ -148,9 +148,9 @@ ISP=$(curl -s --max-time 2 https://speed.cloudflare.com/meta | awk -F\" '{print 
 echo -e "\e[1;32mHysteria2安装成功\033[0m\n"
 echo -e "\e[1;32m本机IP：$HOST_IP\033[0m\n"
 echo -e "\e[1;33mV2rayN 或 Nekobox、小火箭等直接导入,跳过证书验证需设置为true\033[0m\n"
-echo -e "\e[1;32mhysteria2://$UUID@$HOST_IP:$PORT/?sni=www.bing.com&alpn=h3&insecure=1#$ISP-$NAME\033[0m\n"
+echo -e "\e[1;32mhysteria2://$UUID@$HOST_IP:$PORT/?sni=www.423down.com&alpn=h3&insecure=1#$ISP-$NAME\033[0m\n"
 echo -e "\e[1;33mSurge\033[0m"
-echo -e "\e[1;32m$ISP-$NAME = hysteria2, $HOST_IP, $PORT, password = $UUID, skip-cert-verify=true, sni=www.bing.com\033[0m\n"
+echo -e "\e[1;32m$ISP-$NAME = hysteria2, $HOST_IP, $PORT, password = $UUID, skip-cert-verify=true, sni=www.423down.com\033[0m\n"
 echo -e "\e[1;33mClash\033[0m"
 cat << EOF
 - name: $ISP-$NAME
@@ -160,7 +160,7 @@ cat << EOF
   password: $UUID
   alpn:
     - h3
-  sni: www.bing.com
+  sni: www.423down.com
   skip-cert-verify: true
   fast-open: true
 EOF
