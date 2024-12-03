@@ -1,116 +1,153 @@
 #!/bin/bash
 
-# 设置默认值
-UUID="ff553813-58eb-4d93-91b7-1d9c567952a9"
-VLESS_PORT="33239"
-HY2_PORT="33236"
-TUIC_PORT="36233"
-REYM="yg.justn.us.kg"
+# 定义颜色
+green() { echo -e "\e[1;32m$1\033[0m"; }
+yellow() { echo -e "\e[1;33m$1\033[0m"; }
+purple() { echo -e "\e[1;35m$1\033[0m"; }
 
 USERNAME=$(whoami)
 HOSTNAME=$(hostname)
 WORKDIR="domains/${USERNAME}.serv00.net/logs"
 [ -d "$WORKDIR" ] || (mkdir -p "$WORKDIR" && chmod 777 "$WORKDIR")
 
+# 从环境变量中读取变量（提供默认值以防缺失）
+UUID="${UUID:-$(uuidgen)}"
+VLESS_PORT="${VLESS_PORT:-443}"
+HY2_PORT="${HY2_PORT:-2053}"
+TUIC_PORT="${TUIC_PORT:-2096}"
+REALITY_DOMAIN="${REALITY_DOMAIN:-example.com}"
+
+# 下载并运行 sing-box
 install_singbox() {
-    echo -e "开始自动安装 Sing-box，协议：vless-reality, hysteria2, tuic\n"
-    cd $WORKDIR
+    echo -e "${yellow}开始安装并配置 sing-box (vless-reality, hysteria2, tuic)...${re}"
+    cd $WORKDIR || exit 1
 
-    download_and_run_singbox
-    echo
-    generate_links
-}
-
-download_and_run_singbox() {
+    # 下载文件
     ARCH=$(uname -m)
     DOWNLOAD_DIR="."
     mkdir -p "$DOWNLOAD_DIR"
+    FILE_INFO=()
 
-    if [[ "$ARCH" == "amd64" || "$ARCH" == "x86_64" ]]; then
+    if [[ "$ARCH" =~ ^(arm|arm64|aarch64)$ ]]; then
+        FILE_INFO=("https://github.com/eooce/test/releases/download/arm64/sb web" "https://github.com/eooce/test/releases/download/ARM/swith npm")
+    elif [[ "$ARCH" =~ ^(amd64|x86_64|x86)$ ]]; then
         FILE_INFO=("https://github.com/eooce/test/releases/download/freebsd/sb web" "https://github.com/eooce/test/releases/download/freebsd/npm npm")
     else
         echo "Unsupported architecture: $ARCH"
         exit 1
     fi
 
-    declare -A FILE_MAP
     for entry in "${FILE_INFO[@]}"; do
         URL=$(echo "$entry" | cut -d ' ' -f 1)
-        FILENAME="$DOWNLOAD_DIR/$(basename $URL)"
-        wget -q -O "$FILENAME" "$URL"
-        chmod +x "$FILENAME"
-        FILE_MAP[$(echo "$entry" | cut -d ' ' -f 2)]="$FILENAME"
+        NEW_FILENAME="$DOWNLOAD_DIR/$(basename $URL)"
+        curl -L -sS --max-time 2 -o "$NEW_FILENAME" "$URL" || wget -q -O "$NEW_FILENAME" "$URL"
+        chmod +x "$NEW_FILENAME"
     done
 
-    # 生成 Reality Keypair
-    output=$("${FILE_MAP[web]}" generate reality-keypair)
-    private_key=$(echo "${output}" | awk '/PrivateKey:/ {print $2}')
-    public_key=$(echo "${output}" | awk '/PublicKey:/ {print $2}')
+    # 生成配置
+    PRIVATE_KEY="`uuidgen -r`"
+    PUBLIC_KEY="`uuidgen -r`"
 
-    openssl ecparam -genkey -name prime256v1 -out "private.key"
-    openssl req -new -x509 -days 3650 -key "private.key" -out "cert.pem" -subj "/CN=$USERNAME.serv00.net"
-
-    # 创建配置文件
     cat > config.json << EOF
 {
+  "log": {
+    "disabled": true,
+    "level": "info",
+    "timestamp": true
+  },
   "inbounds": [
     {
       "tag": "vless-reality",
       "type": "vless",
+      "listen": "0.0.0.0",
       "listen_port": $VLESS_PORT,
-      "users": [{ "uuid": "$UUID" }],
+      "users": [
+        {
+          "uuid": "$UUID",
+          "flow": "xtls-rprx-vision"
+        }
+      ],
       "tls": {
         "enabled": true,
+        "server_name": "$REALITY_DOMAIN",
         "reality": {
           "enabled": true,
-          "server": "$REYM",
-          "server_port": 443,
-          "private_key": "$private_key"
+          "handshake": {
+            "server": "$REALITY_DOMAIN",
+            "server_port": 443
+          },
+          "private_key": "$PRIVATE_KEY",
+          "short_id": [""]
         }
       }
     },
     {
-      "tag": "hysteria-in",
+      "tag": "hysteria2",
       "type": "hysteria2",
+      "listen": "0.0.0.0",
       "listen_port": $HY2_PORT,
-      "users": [{ "password": "$UUID" }]
+      "users": [
+        {
+          "password": "$UUID"
+        }
+      ],
+      "tls": {
+        "enabled": true,
+        "alpn": ["h3"],
+        "certificate_path": "cert.pem",
+        "key_path": "private.key"
+      }
     },
     {
-      "tag": "tuic-in",
+      "tag": "tuic",
       "type": "tuic",
+      "listen": "0.0.0.0",
       "listen_port": $TUIC_PORT,
-      "users": [{ "uuid": "$UUID", "password": "$UUID" }]
+      "users": [
+        {
+          "uuid": "$UUID",
+          "password": "$UUID"
+        }
+      ],
+      "tls": {
+        "enabled": true,
+        "alpn": ["h3"],
+        "certificate_path": "cert.pem",
+        "key_path": "private.key"
+      }
     }
-  ],
-  "outbounds": [
-    { "type": "direct", "tag": "direct" }
   ]
 }
 EOF
 
-    nohup ./"${FILE_MAP[web]}" run -c config.json >/dev/null 2>&1 &
+    # 启动 sing-box
+    ./sb run -c config.json &
     sleep 2
+
+    echo -e "${green}Sing-box 已启动！${re}"
 }
 
-generate_links() {
-    IP=$(curl -s --max-time 1.5 ipv4.ip.sb || echo "0.0.0.0")
-    PUBLIC_KEY=$(grep -oP '(?<=PublicKey: )[^\s]+' config.json)
+# 输出节点信息
+get_links() {
+    IP=$(curl -s ipv4.ip.sb)
+    ISP=$(curl -s https://speed.cloudflare.com/meta | awk -F\" '{print $26}' | sed -e 's/ /_/g' || echo "unknown")
+    NAME="${ISP}-${HOSTNAME}"
 
-    cat > list.txt << EOF
-VLESS Reality 分享链接：
-vless://$UUID@$IP:$VLESS_PORT?security=reality&encryption=none&flow=xtls-rprx-vision&sni=$REYM&fp=chrome&pbk=$PUBLIC_KEY&type=tcp#$REYM-vless
+    echo -e "${yellow}生成的节点信息如下：${re}"
+    cat > list.txt <<EOF
+VLESS Reality:
+vless://$UUID@$IP:$VLESS_PORT?encryption=none&flow=xtls-rprx-vision&security=reality&sni=$REALITY_DOMAIN&fp=chrome&pbk=PUBLIC_KEY&type=tcp&headerType=none#$NAME-reality
 
-HY2 分享链接：
-hysteria2://$UUID@$IP:$HY2_PORT?sni=$REYM&alpn=h3#$REYM-hysteria2
+Hysteria2:
+hysteria2://$UUID@$IP:$HY2_PORT?sni=www.bing.com&alpn=h3&insecure=1#$NAME-hy2
 
-TUIC 分享链接：
-tuic://$UUID:$UUID@$IP:$TUIC_PORT?sni=$REYM&udp_relay_mode=native#$REYM-tuic
-
-Proxy IP 信息：
-IP:$IP 端口:$VLESS_PORT
+TUIC:
+tuic://$UUID:$UUID@$IP:$TUIC_PORT?sni=www.bing.com&congestion_control=bbr&udp_relay_mode=native&alpn=h3&allow_insecure=1#$NAME-tuic
 EOF
 
     cat list.txt
 }
 
+# 主程序
 install_singbox
+get_links
