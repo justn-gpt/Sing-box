@@ -1,4 +1,5 @@
 #!/bin/bash
+
 # 定义颜色
 green() { echo -e "\e[1;32m$1\033[0m"; }
 yellow() { echo -e "\e[1;33m$1\033[0m"; }
