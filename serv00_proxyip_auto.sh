@@ -10,12 +10,12 @@ HOSTNAME=$(hostname)
 WORKDIR="domains/${USERNAME}.serv00.net/logs"
 [ -d "$WORKDIR" ] || (mkdir -p "$WORKDIR" && chmod 777 "$WORKDIR")
 
-# 从环境变量中读取变量（提供默认值以防缺失）
+# 从环境变量读取参数，提供默认值
 UUID="${UUID:-$(uuidgen)}"
-VLESS_PORT="${VLESS_PORT:-443}"
-HY2_PORT="${HY2_PORT:-2053}"
-TUIC_PORT="${TUIC_PORT:-2096}"
-REALITY_DOMAIN="${REALITY_DOMAIN:-example.com}"
+vless_port="${vless_port:-33239}"
+hy2_port="${hy2_port:-33236}"
+tuic_port="${tuic_port:-36233}"
+reality_domain="${reality_domain:-yg.justn.us.kg}"
 
 # 下载并运行 sing-box
 install_singbox() {
@@ -44,23 +44,18 @@ install_singbox() {
         chmod +x "$NEW_FILENAME"
     done
 
-    # 生成配置
-    PRIVATE_KEY="`uuidgen -r`"
-    PUBLIC_KEY="`uuidgen -r`"
+    # 生成配置文件
+    private_key="`uuidgen -r`"
+    public_key="`uuidgen -r`"
 
     cat > config.json << EOF
 {
-  "log": {
-    "disabled": true,
-    "level": "info",
-    "timestamp": true
-  },
   "inbounds": [
     {
       "tag": "vless-reality",
       "type": "vless",
       "listen": "0.0.0.0",
-      "listen_port": $VLESS_PORT,
+      "listen_port": $vless_port,
       "users": [
         {
           "uuid": "$UUID",
@@ -69,14 +64,14 @@ install_singbox() {
       ],
       "tls": {
         "enabled": true,
-        "server_name": "$REALITY_DOMAIN",
+        "server_name": "$reality_domain",
         "reality": {
           "enabled": true,
           "handshake": {
-            "server": "$REALITY_DOMAIN",
+            "server": "$reality_domain",
             "server_port": 443
           },
-          "private_key": "$PRIVATE_KEY",
+          "private_key": "$private_key",
           "short_id": [""]
         }
       }
@@ -85,7 +80,7 @@ install_singbox() {
       "tag": "hysteria2",
       "type": "hysteria2",
       "listen": "0.0.0.0",
-      "listen_port": $HY2_PORT,
+      "listen_port": $hy2_port,
       "users": [
         {
           "password": "$UUID"
@@ -102,7 +97,7 @@ install_singbox() {
       "tag": "tuic",
       "type": "tuic",
       "listen": "0.0.0.0",
-      "listen_port": $TUIC_PORT,
+      "listen_port": $tuic_port,
       "users": [
         {
           "uuid": "$UUID",
@@ -123,31 +118,27 @@ EOF
     # 启动 sing-box
     ./sb run -c config.json &
     sleep 2
-
     echo -e "${green}Sing-box 已启动！${re}"
 }
 
 # 输出节点信息
 get_links() {
     IP=$(curl -s ipv4.ip.sb)
-    ISP=$(curl -s https://speed.cloudflare.com/meta | awk -F\" '{print $26}' | sed -e 's/ /_/g' || echo "unknown")
-    NAME="${ISP}-${HOSTNAME}"
-
     echo -e "${yellow}生成的节点信息如下：${re}"
     cat > list.txt <<EOF
 VLESS Reality:
-vless://$UUID@$IP:$VLESS_PORT?encryption=none&flow=xtls-rprx-vision&security=reality&sni=$REALITY_DOMAIN&fp=chrome&pbk=PUBLIC_KEY&type=tcp&headerType=none#$NAME-reality
+vless://$UUID@$IP:$vless_port?encryption=none&flow=xtls-rprx-vision&security=reality&sni=$reality_domain&fp=chrome&pbk=$public_key&type=tcp&headerType=none
 
 Hysteria2:
-hysteria2://$UUID@$IP:$HY2_PORT?sni=www.bing.com&alpn=h3&insecure=1#$NAME-hy2
+hysteria2://$UUID@$IP:$hy2_port?sni=www.bing.com&alpn=h3&insecure=1
 
 TUIC:
-tuic://$UUID:$UUID@$IP:$TUIC_PORT?sni=www.bing.com&congestion_control=bbr&udp_relay_mode=native&alpn=h3&allow_insecure=1#$NAME-tuic
+tuic://$UUID:$UUID@$IP:$tuic_port?sni=www.bing.com&congestion_control=bbr&udp_relay_mode=native&alpn=h3&allow_insecure=1
 EOF
 
     cat list.txt
 }
 
-# 主程序
+# 执行安装和生成节点信息
 install_singbox
 get_links
