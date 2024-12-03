@@ -8,7 +8,7 @@ rm -rf ~/*
 # 定义颜色
 green() { echo -e "\e[1;32m$1\033[0m"; }
 yellow() { echo -e "\e[1;33m$1\033[0m"; }
-purple() { echo -e "\e[1;35m$1\033[0m"; }
+red() { echo -e "\e[1;91m$1\033[0m"; }
 
 USERNAME=$(whoami)
 HOSTNAME=$(hostname)
@@ -22,9 +22,19 @@ hy2_port="${hy2_port:-33236}"
 tuic_port="${tuic_port:-36233}"
 reality_domain="${reality_domain:-yg.justn.us.kg}"
 
+# 下载文件的函数
+download_with_fallback() {
+    local URL=$1
+    local NEW_FILENAME=$2
+    for i in {1..3}; do
+        curl -L -sS --max-time 30 -o "$NEW_FILENAME" "$URL" && break || sleep 5
+    done
+    [ -s "$NEW_FILENAME" ] || { red "Failed to download $URL"; exit 1; }
+}
+
 # 下载并运行 sing-box
 install_singbox() {
-    echo -e "${yellow}开始安装并配置 sing-box (vless-reality, hysteria2, tuic)...${re}"
+    green "开始安装并配置 sing-box (vless-reality, hysteria2, tuic)..."
     cd $WORKDIR || exit 1
 
     # 下载文件
@@ -34,25 +44,28 @@ install_singbox() {
     FILE_INFO=()
 
     if [[ "$ARCH" =~ ^(arm|arm64|aarch64)$ ]]; then
-        FILE_INFO=("https://github.com/eooce/test/releases/download/arm64/sb web" "https://github.com/eooce/test/releases/download/ARM/swith npm")
+        FILE_INFO=("https://github.com/eooce/test/releases/download/arm64/sb web")
     elif [[ "$ARCH" =~ ^(amd64|x86_64|x86)$ ]]; then
-        FILE_INFO=("https://github.com/eooce/test/releases/download/freebsd/sb web" "https://github.com/eooce/test/releases/download/freebsd/npm npm")
+        FILE_INFO=("https://github.com/eooce/test/releases/download/freebsd/sb web")
     else
-        echo "Unsupported architecture: $ARCH"
+        red "Unsupported architecture: $ARCH"
         exit 1
     fi
 
     for entry in "${FILE_INFO[@]}"; do
         URL=$(echo "$entry" | cut -d ' ' -f 1)
         NEW_FILENAME="$DOWNLOAD_DIR/$(basename $URL)"
-        curl -L -sS --max-time 2 -o "$NEW_FILENAME" "$URL" || wget -q -O "$NEW_FILENAME" "$URL"
+        download_with_fallback "$URL" "$NEW_FILENAME"
         chmod +x "$NEW_FILENAME"
     done
 
-    # 生成配置文件
-    private_key="`uuidgen -r`"
-    public_key="`uuidgen -r`"
+    # 私钥生成部分修复
+    output=$(./sb generate reality-keypair)
+    private_key=$(echo "$output" | awk '/PrivateKey:/ {print $2}')
+    public_key=$(echo "$output" | awk '/PublicKey:/ {print $2}')
+    [ -n "$private_key" ] || { red "Failed to generate private key"; exit 1; }
 
+    # 生成配置文件
     cat > config.json << EOF
 {
   "inbounds": [
@@ -123,7 +136,7 @@ EOF
     # 启动 sing-box
     ./sb run -c config.json &
     sleep 2
-    echo -e "${green}Sing-box 已启动！${re}"
+    green "Sing-box 已启动！"
 }
 
 # 生成节点信息并处理 proxyip/非标端口反代ip
@@ -132,7 +145,7 @@ get_links() {
     ISP=$(curl -s https://speed.cloudflare.com/meta | awk -F\" '{print $26}' | sed -e 's/ /_/g' || echo "unknown")
     NAME="${ISP}-${HOSTNAME}"
 
-    echo -e "${yellow}生成的节点和反代信息如下：${re}"
+    yellow "生成的节点和反代信息如下："
     cat > list.txt <<EOF
 VLESS Reality:
 vless://$UUID@$IP:$vless_port?encryption=none&flow=xtls-rprx-vision&security=reality&sni=$reality_domain&fp=chrome&pbk=$public_key&type=tcp&headerType=none#$NAME-reality
