@@ -10,7 +10,7 @@ HOSTNAME=$(hostname)
 WORKDIR="domains/${USERNAME}.serv00.net/logs"
 [ -d "$WORKDIR" ] || (mkdir -p "$WORKDIR" && chmod 777 "$WORKDIR")
 
-# 从环境变量读取参数，提供默认值
+# 从环境变量中获取参数，提供默认值
 UUID="${UUID:-$(uuidgen)}"
 vless_port="${vless_port:-33239}"
 hy2_port="${hy2_port:-33236}"
@@ -121,19 +121,29 @@ EOF
     echo -e "${green}Sing-box 已启动！${re}"
 }
 
-# 输出节点信息
+# 生成节点信息并处理 proxyip/非标端口反代ip
 get_links() {
     IP=$(curl -s ipv4.ip.sb)
-    echo -e "${yellow}生成的节点信息如下：${re}"
+    ISP=$(curl -s https://speed.cloudflare.com/meta | awk -F\" '{print $26}' | sed -e 's/ /_/g' || echo "unknown")
+    NAME="${ISP}-${HOSTNAME}"
+
+    echo -e "${yellow}生成的节点和反代信息如下：${re}"
     cat > list.txt <<EOF
 VLESS Reality:
-vless://$UUID@$IP:$vless_port?encryption=none&flow=xtls-rprx-vision&security=reality&sni=$reality_domain&fp=chrome&pbk=$public_key&type=tcp&headerType=none
+vless://$UUID@$IP:$vless_port?encryption=none&flow=xtls-rprx-vision&security=reality&sni=$reality_domain&fp=chrome&pbk=$public_key&type=tcp&headerType=none#$NAME-reality
+
+Proxyip 信息:
+全局应用：设置变量名：proxyip 设置变量值：$IP:$vless_port
+单节点应用：path 路径改为：/pyip=$IP:$vless_port
+
+非标端口反代信息:
+优选 IP 地址：$IP，端口：$vless_port（TLS 必须开启）
 
 Hysteria2:
-hysteria2://$UUID@$IP:$hy2_port?sni=www.bing.com&alpn=h3&insecure=1
+hysteria2://$UUID@$IP:$hy2_port?sni=www.bing.com&alpn=h3&insecure=1#$NAME-hy2
 
 TUIC:
-tuic://$UUID:$UUID@$IP:$tuic_port?sni=www.bing.com&congestion_control=bbr&udp_relay_mode=native&alpn=h3&allow_insecure=1
+tuic://$UUID:$UUID@$IP:$tuic_port?sni=www.bing.com&congestion_control=bbr&udp_relay_mode=native&alpn=h3&allow_insecure=1#$NAME-tuic
 EOF
 
     cat list.txt
