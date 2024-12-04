@@ -68,7 +68,12 @@ function download_and_run_singbox() {
   # 配置文件生成
   cat > config.json <<EOF
 {
-  "log": { "level": "info" },
+  "log": { 
+    "disabled": false, 
+    "level": "debug", 
+    "timestamp": true, 
+    "output": "sb.log" 
+  },
   "inbounds": [
     {
       "tag": "vless-in",
@@ -108,7 +113,7 @@ function download_and_run_singbox() {
 EOF
 
   # 运行服务
-  nohup "${FILE_MAP[web]}" run -c config.json >/dev/null 2>&1 &
+  nohup "${FILE_MAP[web]}" run -c config.json > sb.log 2>&1 &
 }
 
 # 获取 ProxyIP 和反代 IP 信息
@@ -140,6 +145,14 @@ EOF
 function main() {
   green_echo "开始安装 Sing-box..."
   download_and_run_singbox
+
+  sleep 2
+  if ! pgrep -f sb >/dev/null; then
+    red_echo "Sing-box 服务启动失败，请查看日志 (sb.log)！"
+    cat sb.log
+    exit 1
+  fi
+
   green_echo "服务安装完成。"
   generate_proxyip_info
 }
