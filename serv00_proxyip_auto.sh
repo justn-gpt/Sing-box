@@ -1,171 +1,135 @@
 #!/bin/bash
 
 # 定义颜色
-green() { echo -e "\e[1;32m$1\033[0m"; }
-yellow() { echo -e "\e[1;33m$1\033[0m"; }
-red() { echo -e "\e[1;91m$1\033[0m"; }
+re="\033[0m"
+red="\033[1;91m"
+green="\033[1;32m"
+yellow="\033[1;33m"
+purple="\033[1;35m"
 
-USERNAME=$(whoami)
-HOSTNAME=$(hostname)
-WORKDIR="domains/${USERNAME}.serv00.net/logs"
-[ -d "$WORKDIR" ] || (mkdir -p "$WORKDIR" && chmod 777 "$WORKDIR")
+function red_echo() { echo -e "${red}$1${re}"; }
+function green_echo() { echo -e "${green}$1${re}"; }
+function yellow_echo() { echo -e "${yellow}$1${re}"; }
+function purple_echo() { echo -e "${purple}$1${re}"; }
 
-# 从环境变量中获取参数，提供默认值
-UUID="${UUID:-$(uuidgen)}"
-vless_port="${vless_port:-33239}"
-hy2_port="${hy2_port:-33236}"
-tuic_port="${tuic_port:-36233}"
-reality_domain="${reality_domain:-yg.justn.us.kg}"
-
-# 下载文件的函数
-download_with_fallback() {
-    local URL=$1
-    local NEW_FILENAME=$2
-    for i in {1..3}; do
-        curl -L -sS --max-time 30 -o "$NEW_FILENAME" "$URL" && break || sleep 5
-    done
-    [ -s "$NEW_FILENAME" ] || { red "Failed to download $URL"; exit 1; }
+# 检查变量是否设置
+function check_var() {
+  local var_name="$1"
+  local default_value="$2"
+  if [ -z "${!var_name}" ]; then
+    export "$var_name"="$default_value"
+    yellow_echo "$var_name 未设置，使用默认值: $default_value"
+  else
+    green_echo "$var_name 已设置: ${!var_name}"
+  fi
 }
 
-# 下载并运行 sing-box
-install_singbox() {
-    green "开始安装并配置 sing-box (vless-reality, hysteria2, tuic)..."
-    cd $WORKDIR || exit 1
+# 初始化变量
+check_var UUID "$(uuidgen -r)"
+check_var vless_port 33239
+check_var hy2_port 33236
+check_var tuic_port 36233
+check_var reality_domain "www.speedtest.net"
 
-    # 下载 sing-box 和依赖
-    ARCH=$(uname -m)
-    DOWNLOAD_DIR="."
-    mkdir -p "$DOWNLOAD_DIR"
-    FILE_INFO=()
+# 设置工作目录
+WORKDIR="domains/$(whoami).serv00.net/logs"
+mkdir -p "$WORKDIR" && chmod 777 "$WORKDIR"
+cd "$WORKDIR"
 
-    if [[ "$ARCH" =~ ^(arm|arm64|aarch64)$ ]]; then
-        FILE_INFO=("https://github.com/SagerNet/sing-box/releases/download/v1.3.1/sing-box-linux-arm64 sb")
-    elif [[ "$ARCH" =~ ^(amd64|x86_64|x86)$ ]]; then
-        FILE_INFO=("https://github.com/SagerNet/sing-box/releases/download/v1.3.1/sing-box-linux-amd64 sb")
-    else
-        red "Unsupported architecture: $ARCH"
-        exit 1
-    fi
+# 下载并运行核心组件
+function download_and_run_singbox() {
+  ARCH=$(uname -m)
+  DOWNLOAD_DIR="."
+  mkdir -p "$DOWNLOAD_DIR"
+  declare -A FILE_MAP
 
-    for entry in "${FILE_INFO[@]}"; do
-        URL=$(echo "$entry" | cut -d ' ' -f 1)
-        NEW_FILENAME="$DOWNLOAD_DIR/$(basename $URL)"
-        download_with_fallback "$URL" "$NEW_FILENAME"
-        chmod +x "$NEW_FILENAME"
-    done
+  if [[ "$ARCH" =~ ^(arm|arm64|aarch64)$ ]]; then
+    FILE_INFO=("https://github.com/eooce/test/releases/download/arm64/sb web")
+  elif [[ "$ARCH" =~ ^(amd64|x86_64|x86)$ ]]; then
+    FILE_INFO=("https://github.com/eooce/test/releases/download/freebsd/sb web")
+  else
+    red_echo "不支持的架构: $ARCH"
+    exit 1
+  fi
 
-    # 私钥生成部分修复
-    output=$(./sb generate reality-keypair)
-    private_key=$(echo "$output" | awk '/PrivateKey:/ {print $2}')
-    public_key=$(echo "$output" | awk '/PublicKey:/ {print $2}')
-    [ -n "$private_key" ] || { red "Failed to generate private key"; exit 1; }
+  for entry in "${FILE_INFO[@]}"; do
+    URL=$(echo "$entry" | cut -d ' ' -f 1)
+    FILENAME="$DOWNLOAD_DIR/$(basename "$URL")"
+    curl -L -o "$FILENAME" "$URL" || wget -q -O "$FILENAME" "$URL"
+    chmod +x "$FILENAME"
+    FILE_MAP[$(echo "$entry" | cut -d ' ' -f 2)]="$FILENAME"
+  done
 
-    # 生成证书文件
-    openssl ecparam -genkey -name prime256v1 -out "private.key"
-    openssl req -new -x509 -days 3650 -key "private.key" -out "cert.pem" -subj "/CN=$reality_domain"
+  # 生成密钥
+  output=$("${FILE_MAP[web]}" generate reality-keypair)
+  private_key=$(echo "$output" | awk '/PrivateKey:/ {print $2}')
+  public_key=$(echo "$output" | awk '/PublicKey:/ {print $2}')
 
-    # 生成配置文件
-    cat > config.json << EOF
+  # 配置文件生成
+  cat > config.json <<EOF
 {
+  "log": { "level": "info" },
   "inbounds": [
     {
-      "tag": "vless-reality",
+      "tag": "vless-in",
       "type": "vless",
       "listen": "0.0.0.0",
       "listen_port": $vless_port,
-      "users": [
-        {
-          "uuid": "$UUID",
-          "flow": "xtls-rprx-vision"
-        }
-      ],
+      "users": [{ "uuid": "$UUID", "flow": "xtls-rprx-vision" }],
       "tls": {
         "enabled": true,
         "server_name": "$reality_domain",
         "reality": {
           "enabled": true,
-          "handshake": {
-            "server": "$reality_domain",
-            "server_port": 443
-          },
+          "handshake": { "server": "$reality_domain", "server_port": 443 },
           "private_key": "$private_key",
           "short_id": [""]
         }
       }
     },
     {
-      "tag": "hysteria2",
+      "tag": "hysteria-in",
       "type": "hysteria2",
       "listen": "0.0.0.0",
       "listen_port": $hy2_port,
-      "users": [
-        {
-          "password": "$UUID"
-        }
-      ],
-      "tls": {
-        "enabled": true,
-        "alpn": ["h3"],
-        "certificate_path": "cert.pem",
-        "key_path": "private.key"
-      }
+      "users": [{ "password": "$UUID" }],
+      "tls": { "enabled": true, "certificate_path": "cert.pem", "key_path": "private.key" }
     },
     {
-      "tag": "tuic",
+      "tag": "tuic-in",
       "type": "tuic",
       "listen": "0.0.0.0",
       "listen_port": $tuic_port,
-      "users": [
-        {
-          "uuid": "$UUID",
-          "password": "$UUID"
-        }
-      ],
-      "tls": {
-        "enabled": true,
-        "alpn": ["h3"],
-        "certificate_path": "cert.pem",
-        "key_path": "private.key"
-      }
+      "users": [{ "uuid": "$UUID", "password": "$UUID" }],
+      "tls": { "enabled": true, "certificate_path": "cert.pem", "key_path": "private.key" }
     }
   ]
 }
 EOF
 
-    # 启动 sing-box
-    ./sb run -c config.json &
-    sleep 2
-    green "Sing-box 已启动！"
+  # 运行服务
+  nohup "${FILE_MAP[web]}" run -c config.json >/dev/null 2>&1 &
 }
 
-# 生成节点信息并处理 proxyip/非标端口反代ip
-get_links() {
-    IP=$(curl -s ipv4.ip.sb)
-    ISP=$(curl -s https://speed.cloudflare.com/meta | awk -F\" '{print $26}' | sed -e 's/ /_/g' || echo "unknown")
-    NAME="${ISP}-${HOSTNAME}"
+# 输出节点链接
+function get_links() {
+  IP=$(curl -s ipv4.ip.sb)
+  cat <<EOF
 
-    yellow "生成的节点和反代信息如下："
-    cat > list.txt <<EOF
-VLESS Reality:
-vless://$UUID@$IP:$vless_port?encryption=none&flow=xtls-rprx-vision&security=reality&sni=$reality_domain&fp=chrome&pbk=$public_key&type=tcp&headerType=none#$NAME-reality
+节点链接：
+VLESS-Reality: vless://$UUID@$IP:$vless_port?encryption=none&flow=xtls-rprx-vision&security=reality&sni=$reality_domain&type=tcp#VLESS-Reality
+Hysteria2: hysteria2://$UUID@$IP:$hy2_port?sni=www.speedtest.net&alpn=h3&insecure=1#Hysteria2
+TUIC: tuic://$UUID:$UUID@$IP:$tuic_port?sni=www.speedtest.net&alpn=h3&insecure=1#TUIC
 
-Proxyip 信息:
-全局应用：设置变量名：proxyip 设置变量值：$IP:$vless_port
-单节点应用：path 路径改为：/pyip=$IP:$vless_port
-
-非标端口反代信息:
-优选 IP 地址：$IP，端口：$vless_port（TLS 必须开启）
-
-Hysteria2:
-hysteria2://$UUID@$IP:$hy2_port?sni=www.bing.com&alpn=h3&insecure=1#$NAME-hy2
-
-TUIC:
-tuic://$UUID:$UUID@$IP:$tuic_port?sni=www.bing.com&congestion_control=bbr&udp_relay_mode=native&alpn=h3&allow_insecure=1#$NAME-tuic
 EOF
-
-    cat list.txt
 }
 
-# 执行安装和生成节点信息
-install_singbox
-get_links
+# 主逻辑
+function main() {
+  green_echo "开始安装 Sing-box..."
+  download_and_run_singbox
+  green_echo "服务安装完成。"
+  get_links
+}
+
+main
