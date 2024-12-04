@@ -60,7 +60,7 @@ function download_and_run_singbox() {
     FILE_MAP[$(echo "$entry" | cut -d ' ' -f 2)]="$FILENAME"
   done
 
-  # 生成密钥
+  # 生成 Reality 密钥
   output=$("${FILE_MAP[web]}" generate reality-keypair)
   private_key=$(echo "$output" | awk '/PrivateKey:/ {print $2}')
   public_key=$(echo "$output" | awk '/PublicKey:/ {print $2}')
@@ -111,15 +111,27 @@ EOF
   nohup "${FILE_MAP[web]}" run -c config.json >/dev/null 2>&1 &
 }
 
-# 输出节点链接
-function get_links() {
+# 获取 ProxyIP 和反代 IP 信息
+function generate_proxyip_info() {
   IP=$(curl -s ipv4.ip.sb)
+  ISP=$(curl -s https://speed.cloudflare.com/meta | awk -F\" '{print $26}' | sed -e 's/ /_/g' || echo "未知ISP")
+  LOCATION=$(curl -s https://ipapi.co/$IP/region/)
+  HOST_INFO="${ISP}-${LOCATION}"
+
   cat <<EOF
 
+ProxyIP 信息：
+1. ProxyIP (全局应用)：$IP:$vless_port
+2. 非标端口反代 IP：
+   优选 IP：$IP
+   端口：$vless_port
+
+注：CF 节点需要将 TLS 设置为 **启用**。
+
 节点链接：
-VLESS-Reality: vless://$UUID@$IP:$vless_port?encryption=none&flow=xtls-rprx-vision&security=reality&sni=$reality_domain&type=tcp#VLESS-Reality
-Hysteria2: hysteria2://$UUID@$IP:$hy2_port?sni=www.speedtest.net&alpn=h3&insecure=1#Hysteria2
-TUIC: tuic://$UUID:$UUID@$IP:$tuic_port?sni=www.speedtest.net&alpn=h3&insecure=1#TUIC
+VLESS-Reality: vless://$UUID@$IP:$vless_port?encryption=none&flow=xtls-rprx-vision&security=reality&sni=$reality_domain&type=tcp#${HOST_INFO}-VLESS-Reality
+Hysteria2: hysteria2://$UUID@$IP:$hy2_port?sni=$reality_domain&alpn=h3&insecure=1#${HOST_INFO}-Hysteria2
+TUIC: tuic://$UUID:$UUID@$IP:$tuic_port?sni=$reality_domain&alpn=h3&insecure=1#${HOST_INFO}-TUIC
 
 EOF
 }
@@ -129,7 +141,7 @@ function main() {
   green_echo "开始安装 Sing-box..."
   download_and_run_singbox
   green_echo "服务安装完成。"
-  get_links
+  generate_proxyip_info
 }
 
 main
