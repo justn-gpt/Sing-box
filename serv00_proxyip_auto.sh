@@ -36,6 +36,17 @@ WORKDIR="domains/$(whoami).serv00.net/logs"
 mkdir -p "$WORKDIR" && chmod 777 "$WORKDIR"
 cd "$WORKDIR"
 
+# 生成自签名证书
+function generate_self_signed_cert() {
+  openssl req -newkey rsa:2048 -nodes -keyout private.key -x509 -days 3650 -out cert.pem -subj "/CN=$reality_domain"
+  if [[ -f "cert.pem" && -f "private.key" ]]; then
+    green_echo "已成功生成自签名证书 (cert.pem 和 private.key)"
+  else
+    red_echo "生成自签名证书失败，请检查 openssl 是否安装！"
+    exit 1
+  fi
+}
+
 # 下载并运行核心组件
 function download_and_run_singbox() {
   ARCH=$(uname -m)
@@ -144,6 +155,7 @@ EOF
 # 主逻辑
 function main() {
   green_echo "开始安装 Sing-box..."
+  generate_self_signed_cert
   download_and_run_singbox
 
   sleep 2
