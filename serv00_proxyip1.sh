@@ -12,26 +12,27 @@ green() { echo -e "\e[1;32m$1${re}"; }
 yellow() { echo -e "\e[1;33m$1${re}"; }
 purple() { echo -e "\e[1;35m$1${re}"; }
 
-# 确保所有变量均已传递
-function check_required_variables() {
+# 检查是否传递了所有必要变量
+function check_variables() {
   if [[ -z "$UUID" || -z "$vless_port" || -z "$hy2_port" || -z "$tuic_port" || -z "$reality_domain" ]]; then
     red "错误：缺少必要的变量。"
-    echo "请通过命令行传递以下变量，并重试："
+    echo "请通过以下方式传递变量并重试："
     echo "UUID=<uuid> vless_port=<vless端口> hy2_port=<hysteria2端口> tuic_port=<tuic端口> reality_domain=<reality域名> bash <(curl -Ls <脚本地址>)"
     exit 1
   fi
 }
 
-# 检查变量
-check_required_variables
+# 确保变量已传递
+check_variables
 
+# 设置工作目录
 USERNAME=$(whoami)
 HOSTNAME=$(hostname)
 WORKDIR="domains/${USERNAME}.serv00.net/logs"
 mkdir -p "$WORKDIR" && chmod 777 "$WORKDIR"
 cd "$WORKDIR"
 
-# 自动选择可用 IP
+# 选择可用 IP
 function select_ip() {
   echo "正在选择可用 IP..."
   rm -f ip.txt
@@ -50,7 +51,7 @@ function select_ip() {
   green "已选择 IP: $IP"
 }
 
-# 生成证书
+# 生成自签名证书
 function generate_certificates() {
   openssl ecparam -genkey -name prime256v1 -out private.key
   openssl req -new -x509 -days 3650 -key private.key -out cert.pem -subj "/CN=${reality_domain}"
