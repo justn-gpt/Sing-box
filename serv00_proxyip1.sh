@@ -12,18 +12,25 @@ green() { echo -e "\e[1;32m$1${re}"; }
 yellow() { echo -e "\e[1;33m$1${re}"; }
 purple() { echo -e "\e[1;35m$1${re}"; }
 
-# 初始化变量
-UUID=${UUID:-$(uuidgen -r)}
-vless_port=${vless_port:-7239}
-vmess_port=${vmess_port:-3823}
-hy2_port=${hy2_port:-31257}
-reality_domain=${reality_domain:-"www.speedtest.net"}
+# 确保所有变量均已传递
+function check_required_variables() {
+  if [[ -z "$UUID" || -z "$vless_port" || -z "$hy2_port" || -z "$tuic_port" || -z "$reality_domain" ]]; then
+    red "错误：缺少必要的变量。"
+    echo "请通过命令行传递以下变量，并重试："
+    echo "UUID=<uuid> vless_port=<vless端口> hy2_port=<hysteria2端口> tuic_port=<tuic端口> reality_domain=<reality域名> bash <(curl -Ls <脚本地址>)"
+    exit 1
+  fi
+}
+
+# 检查变量
+check_required_variables
 
 USERNAME=$(whoami)
 HOSTNAME=$(hostname)
 WORKDIR="domains/${USERNAME}.serv00.net/logs"
 mkdir -p "$WORKDIR" && chmod 777 "$WORKDIR"
 cd "$WORKDIR"
+
 # 自动选择可用 IP
 function select_ip() {
   echo "正在选择可用 IP..."
@@ -90,17 +97,6 @@ function create_config() {
       }
     },
     {
-      "tag": "vmess-ws",
-      "type": "vmess",
-      "listen": "0.0.0.0",
-      "listen_port": $vmess_port,
-      "users": [{ "uuid": "$UUID" }],
-      "transport": {
-        "type": "ws",
-        "path": "/$UUID-vm"
-      }
-    },
-    {
       "tag": "hysteria",
       "type": "hysteria2",
       "listen": "0.0.0.0",
@@ -110,6 +106,18 @@ function create_config() {
         "enabled": true,
         "server_name": "www.bing.com",
         "insecure": true
+      }
+    },
+    {
+      "tag": "tuic",
+      "type": "tuic",
+      "listen": "0.0.0.0",
+      "listen_port": $tuic_port,
+      "users": [{ "uuid": "$UUID", "password": "$UUID" }],
+      "tls": {
+        "enabled": true,
+        "certificate_path": "cert.pem",
+        "key_path": "private.key"
       }
     }
   ],
@@ -136,14 +144,14 @@ function start_singbox() {
 # 输出节点信息
 function generate_links() {
   vless_link="vless://${UUID}@${IP}:${vless_port}?encryption=none&flow=xtls-rprx-vision&security=reality&sni=${reality_domain}&type=tcp"
-  vmess_link="vmess://$(echo -n "{ \"v\": \"2\", \"ps\": \"Vmess-ws\", \"add\": \"${IP}\", \"port\": \"${vmess_port}\", \"id\": \"${UUID}\", \"aid\": \"0\", \"net\": \"ws\", \"path\": \"/${UUID}-vm\", \"tls\": \"\" }" | base64)"
   hy2_link="hysteria2://${UUID}@${IP}:${hy2_port}?sni=www.bing.com&insecure=1"
-  
+  tuic_link="tuic://${UUID}:${UUID}@${IP}:${tuic_port}?sni=${reality_domain}&alpn=h3"
+
   cat > list.txt <<EOF
 节点分享链接：
 1. VLESS Reality: $vless_link
-2. Vmess WS: $vmess_link
-3. Hysteria2: $hy2_link
+2. Hysteria2: $hy2_link
+3. TUIC: $tuic_link
 EOF
 
   green "节点信息已生成：list.txt"
