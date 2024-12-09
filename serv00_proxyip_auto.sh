@@ -26,9 +26,9 @@ function check_var() {
 
 # 初始化变量
 check_var UUID "$(uuidgen -r)"
-check_var vless_port 33239
-check_var hy2_port 33236
-check_var tuic_port 36233
+check_var vless_port 31219
+check_var hy2_port 31216
+check_var tuic_port 31213
 check_var reality_domain "www.speedtest.net"
 
 # 设置工作目录
