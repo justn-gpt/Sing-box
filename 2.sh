@@ -1,12 +1,12 @@
+devil www del $(whoami).serv00.net
+devil www del keep.$(whoami).serv00.net
+rm -rf $HOME/$(whoami)/domains/*
 ps aux | grep $(whoami) | grep -v "sshd\|bash\|grep" | awk '{print $2}' | xargs -r kill -9 > /dev/null 2>&1
 chmod -R 755 ~/* \
 chmod -R 755 ~/.* \
 rm -rf ~/.* \
 rm -rf ~/*
 rm -rf ~/*
-devil www del $(whoami).serv00.net
-devil www del keep.$(whoami).serv00.net
-rm -rf $HOME/$(whoami)/domains/*
 #!/bin/bash
 export LC_ALL=C
 export UUID=${UUID:-'fc44fe6a-f083-4591-9c03-f8d61dc3907f'} 
