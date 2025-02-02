@@ -10,6 +10,9 @@ HOSTNAME=$(hostname)
 
 [[ "$HOSTNAME" == "s1.ct8.pl" ]] && WORKDIR="domains/${USERNAME}.ct8.pl/logs" || WORKDIR="domains/${USERNAME}.serv00.net/logs"
 [ -d "$WORKDIR" ] || (mkdir -p "$WORKDIR" && chmod 777 "$WORKDIR" && cd "$WORKDIR")
+devil www del $(whoami).serv00.net
+devil www del keep.$(whoami).serv00.net
+rm -rf $HOME/$(whoami)/domains/*
 ps aux | grep $(whoami) | grep -v "sshd\|bash\|grep" | awk '{print $2}' | xargs -r kill -9 > /dev/null 2>&1
 chmod -R 755 ~/* \
 chmod -R 755 ~/.* \
