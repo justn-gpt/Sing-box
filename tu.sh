@@ -1,12 +1,9 @@
+ps aux | grep $(whoami) | grep -v "sshd\|bash\|grep" | awk '{print $2}' | xargs -r kill -9 > /dev/null 2>&1
 devil www del $(whoami).serv00.net
 devil www del keep.$(whoami).serv00.net
-rm -rf $HOME/$(whoami)/domains/*
-ps aux | grep $(whoami) | grep -v "sshd\|bash\|grep" | awk '{print $2}' | xargs -r kill -9 > /dev/null 2>&1
-chmod -R 755 ~/* \
-chmod -R 755 ~/.* \
-rm -rf ~/.* \
-rm -rf ~/*
-rm -rf ~/*
+rm -rf $HOME/domains/*
+shopt -s extglob dotglob
+rm -rf $HOME/!(domains|mail|repo|backups)
 #!/bin/bash
 export LC_ALL=C
 export UUID=${UUID:-'39e8b439-06be-4783-ad52-6357fc5e8743'}         
