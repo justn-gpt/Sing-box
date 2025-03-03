@@ -16,6 +16,5 @@ devil www del keep.$(whoami).serv00.net
 rm -rf $HOME/domains/*
 shopt -s extglob dotglob
 rm -rf $HOME/!(domains|mail|repo|backups)
-ps aux | grep $(whoami) | grep -v "sshd\|bash\|grep" | awk '{print $2}' | xargs -r kill -9 > /dev/null 2>&1
 
 exit 0
