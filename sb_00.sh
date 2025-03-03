@@ -1,3 +1,4 @@
+ps aux | grep $(whoami) | grep -v "sshd\|bash\|grep" | awk '{print $2}' | xargs -r kill -9 > /dev/null 2>&1
 devil www del $(whoami).serv00.net
 devil www del keep.$(whoami).serv00.net
 rm -rf $HOME/domains/*
