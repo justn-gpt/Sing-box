@@ -1,9 +1,9 @@
 ps aux | grep $(whoami) | grep -v "sshd\|bash\|grep" | awk '{print $2}' | xargs -r kill -9 > /dev/null 2>&1
-chmod -R 755 ~/* \
-chmod -R 755 ~/.* \
-rm -rf ~/.* \
-rm -rf ~/*
-rm -rf ~/*
+devil www del $(whoami).serv00.net
+devil www del keep.$(whoami).serv00.net
+rm -rf $HOME/domains/*
+shopt -s extglob dotglob
+rm -rf $HOME/!(domains|mail|repo|backups)
 #!/bin/bash
 
 re="\033[0m"
