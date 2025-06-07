@@ -85,7 +85,7 @@ install_socks5() {
   fi
 
   # 下载 s5 文件并确保下载成功
-  curl -L -sS -o "$S5_EXECUTABLE" "https://github.com/justn-gpt/socks5/releases/download/v1.0.9/5-linux-amd64"
+  curl -L -sS -o "$S5_EXECUTABLE" "https://github.com/justn-gpt/socks5/releases/download/v1.1.0/5-linux-amd64"
   if [ $? -ne 0 ]; then
     echo "s5 文件下载失败"
     exit 1
