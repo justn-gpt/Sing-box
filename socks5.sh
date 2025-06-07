@@ -79,40 +79,44 @@ EOF
 install_socks5() {
   socks5_config
 
-  # 检查并覆盖下载 s5 文件
-  if [ -f "$S5_EXECUTABLE" ]; then
-    echo "s5 文件已存在，正在覆盖..."
-  fi
-
-  # 下载 s5 文件并确保下载成功
-  curl -L -sS -o "$S5_EXECUTABLE" "https://github.com/justn-gpt/socks5/releases/download/v1.0.1/5-linux-amd64"
+  # 下载
+  echo "正在下载 s5 到 $S5_EXECUTABLE"
+  curl -L --fail -sS -o "$S5_EXECUTABLE" "https://github.com/justn-gpt/socks5/releases/download/v1.0.1/5-linux-amd64"
   if [ $? -ne 0 ]; then
-    echo "s5 文件下载失败"
+    echo "❌ s5 文件下载失败（可能是网络问题或下载的是错误页面）"
     exit 1
   fi
 
-  # 设置权限并启动 s5
-  chmod 777 "$S5_EXECUTABLE"
+  # 校验文件是否为 ELF
+  if ! file "$S5_EXECUTABLE" | grep -q "ELF"; then
+    echo "❌ 下载的 s5 不是 ELF 可执行文件，内容如下："
+    head -n 20 "$S5_EXECUTABLE"
+    exit 1
+  fi
+
+  chmod +x "$S5_EXECUTABLE"
+
   echo "启动 s5 进程..."
-  nohup "$S5_EXECUTABLE" -c ${FILE_PATH}/config.json >"${FILE_PATH}/s5.log" 2>&1 &
+  nohup "$S5_EXECUTABLE" -c "${FILE_PATH}/config.json" >"${FILE_PATH}/s5.log" 2>&1 &
 
-  sleep 2  # 等待进程启动
+  sleep 2
 
-  # 检查进程是否启动成功
-  if pgrep -x "s5" > /dev/null; then
-    echo -e "\e[1;32ms5 进程正在运行\e[0m"
+  # 自动提取进程名
+  PROC_NAME=$(basename "$S5_EXECUTABLE")
+  if pgrep -f "$PROC_NAME" > /dev/null; then
+    echo -e "\e[1;32m$PROC_NAME 进程正在运行\e[0m"
   else
-    echo -e "\e[1;31ms5 进程启动失败，请检查日志文件 ${FILE_PATH}/s5.log\e[0m"
+    echo -e "\e[1;31m$PROC_NAME 启动失败，请检查日志文件 ${FILE_PATH}/s5.log\e[0m"
     cat "${FILE_PATH}/s5.log"
     exit 1
   fi
 
-  # 验证代理是否成功
-  CURL_OUTPUT=$(curl -s 4.ipw.cn --socks5 $SOCKS5_USER:$SOCKS5_PASS@localhost:$SOCKS5_PORT)
+  # 验证代理是否正常
+  CURL_OUTPUT=$(curl -s --socks5 $SOCKS5_USER:$SOCKS5_PASS@localhost:$SOCKS5_PORT 4.ipw.cn)
   if [[ $CURL_OUTPUT =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-    echo "代理创建成功，返回的IP是: $CURL_OUTPUT"
+    echo "✅ 代理创建成功，IP: $CURL_OUTPUT"
   else
-    echo "代理创建失败，请检查自己输入的内容。"
+    echo "❌ 代理连接失败，可能是端口/认证配置问题"
   fi
 }
 
