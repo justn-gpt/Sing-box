@@ -117,6 +117,6 @@ install_socks5() {
 }
 
 # 执行安装和配置
-install_microsocks
+install_socks5
 
 echo "脚本执行完成。"
