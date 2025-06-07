@@ -85,7 +85,7 @@ install_socks5() {
   fi
 
   # 下载 s5 文件并确保下载成功
-  curl -L -sS -o "$S5_EXECUTABLE" "https://github.com/eooce/test/releases/download/freebsd/web"
+  curl -L -sS -o "$S5_EXECUTABLE" "https://github.com/justn-gpt/Sing-box/raw/refs/heads/main/microsocks"
   if [ $? -ne 0 ]; then
     echo "s5 文件下载失败"
     exit 1
@@ -117,6 +117,6 @@ install_socks5() {
 }
 
 # 执行安装和配置
-install_socks5
+install_microsocks
 
-echo "脚本执行完成。致谢：RealNeoMan、k0baya、eooce"
+echo "脚本执行完成。"
